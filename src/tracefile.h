@@ -11,22 +11,6 @@
 
 namespace devel {
     namespace statprofiler {
-#if 0 // tentative reader interface
-        struct StackFrame
-        {
-            const char *package;
-            const char *subroutine;
-            const char *file;
-            unsigned int line;
-            const char *op_name;
-        };
-
-        struct StackTrace
-        {
-            unsigned int weight;
-            std::vector<StackFrame> frames;
-        };
-
         class TraceFileReader
         {
         public:
@@ -36,11 +20,10 @@ namespace devel {
             bool is_valid() const { return in; }
             void close();
 
-            StackTrace read_trace();
+            SV *read_trace();
         private:
             std::FILE *in;
         };
-#endif
 
         class TraceFileWriter
         {

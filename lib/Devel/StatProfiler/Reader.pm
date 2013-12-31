@@ -43,6 +43,7 @@ package Devel::StatProfiler::StackFrame;
 sub subroutine { $_[0]->{subroutine} }
 sub file { $_[0]->{file} }
 sub line { $_[0]->{line} }
+sub op_name { $_[0]->{op_name} }
 
 package Devel::StatProfiler::StackTrace;
 
