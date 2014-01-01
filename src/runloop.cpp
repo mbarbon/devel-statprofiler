@@ -235,9 +235,8 @@ runloop(pTHX)
     OP_ENTRY_PROBE(OP_NAME(op));
     while ((PL_op = op = op->op_ppaddr(aTHX))) {
         if (UNLIKELY( counter != pred_counter )) {
-            trace->start_sample(counter - pred_counter);
+            trace->start_sample(aTHX_ counter - pred_counter, prev_op);
             collect_trace(aTHX_ *trace, 20);
-            trace->add_topmost_op(aTHX_ prev_op);
             trace->end_sample();
             pred_counter = counter;
         }

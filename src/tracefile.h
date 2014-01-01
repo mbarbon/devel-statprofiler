@@ -17,8 +17,9 @@ namespace devel {
             TraceFileReader(const std::string &path);
             ~TraceFileReader();
 
-            bool is_valid() const { return in; }
+            void open(const std::string &path);
             void close();
+            bool is_valid() const { return in; }
 
             SV *read_trace();
         private:
@@ -35,18 +36,20 @@ namespace devel {
             void close();
             bool is_valid() const { return out; }
 
-            void start_sample(unsigned int weight);
+            void start_sample(pTHX_ unsigned int weight, OP *current_op);
             void add_frame(unsigned int cxt_type, CV *sub, COP *line);
-            void add_topmost_op(pTHX_ OP *o);
             void end_sample();
 
         private:
             std::FILE *out;
             std::string output_file;
             unsigned int seed;
-            const char *topmost_op_name;
         };
     }
 }
+
+#ifdef _DEVEL_STATPROFILER_XSP
+using namespace devel::statprofiler;
+#endif
 
 #endif
