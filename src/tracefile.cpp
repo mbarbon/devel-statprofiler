@@ -10,6 +10,12 @@ using namespace std;
 #define MAGIC   "=statprofiler"
 #define VERSION 1
 
+#if PERL_SUBVERSION < 16
+# ifndef GvNAMEUTF8
+#   define GvNAMEUTF8(foo) 0
+# endif
+#endif
+
 enum {
     SAMPLE_START = 1,
     SAMPLE_END   = 2,
@@ -312,8 +318,13 @@ void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
 
             if (stash) {
                 package = HvNAME(stash);
+#if PERL_SUBVERSION >= 16
                 package_utf8 = HvNAMEUTF8(stash);
                 package_size = HvNAMELEN(stash);
+#else
+                package_utf8 = 0;
+                package_size = strlen(package);
+#endif
             }
             name = GvNAME(egv);
             name_utf8 = GvNAMEUTF8(egv);
