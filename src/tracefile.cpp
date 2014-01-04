@@ -10,10 +10,17 @@ using namespace std;
 #define MAGIC   "=statprofiler"
 #define VERSION 1
 
+#if PERL_SUBVERSION < 16
+# ifndef GvNAMEUTF8
+#   define GvNAMEUTF8(foo) 0
+# endif
+#endif
+
 enum {
-    SAMPLE_START = 1,
-    SAMPLE_END   = 2,
-    SUB_FRAME    = 3,
+    TAG_SAMPLE_START     = 1,
+    TAG_SAMPLE_END       = 2,
+    TAG_SUB_FRAME        = 3,
+    TAG_HEADER_SEPARATOR = 254,
 };
 
 namespace {
@@ -140,6 +147,7 @@ namespace {
 
 
 TraceFileReader::TraceFileReader(const std::string &path)
+  : file_version(0)
 {
     open(path);
 }
@@ -158,7 +166,20 @@ void TraceFileReader::open(const std::string &path)
         croak("Unexpected end-of-file while reading file magic");
     if (strncmp(magic, MAGIC, sizeof(magic)))
         croak("Invalid file magic");
-    read_varint(in);
+
+    int version_from_file = read_varint(in);
+    // In future, will check that the version is at least not newer
+    // than this library's file format version. That's necessary even
+    // if there's a backcompat layer.
+    if (version_from_file < 1 || version_from_file > VERSION)
+        croak("Incompatible file format version %i", version_from_file);
+
+    file_version = (unsigned int)version_from_file;
+
+    // TODO this becomes a loop reading header records
+    int separator = fgetc(in);
+    if (separator != TAG_HEADER_SEPARATOR)
+        croak("Invalid file: Header does not end with header separator byte");
 }
 
 void TraceFileReader::close()
@@ -171,6 +192,8 @@ void TraceFileReader::close()
 SV *TraceFileReader::read_trace()
 {
     dTHX;
+    // This could possibly be cached across read_trace calls and may
+    // be worthwhile if there's lots.
     HV *st_stash = gv_stashpv("Devel::StatProfiler::StackTrace", 0);
     HV *sf_stash = gv_stashpv("Devel::StatProfiler::StackFrame", 0);
     HV *sample;
@@ -185,7 +208,7 @@ SV *TraceFileReader::read_trace()
         int size = read_varint(in);
 
         switch (type) {
-        case SAMPLE_START: {
+        case TAG_SAMPLE_START: {
             int weight = read_varint(in);
             SV *op_name = read_string(aTHX_ in);
 
@@ -200,7 +223,7 @@ SV *TraceFileReader::read_trace()
         default:
             skip_bytes(in, size);
             break;
-        case SUB_FRAME: {
+        case TAG_SUB_FRAME: {
             SV *package = read_string(aTHX_ in);
             SV *name = read_string(aTHX_ in);
             SV *file = read_string(aTHX_ in);
@@ -226,7 +249,7 @@ SV *TraceFileReader::read_trace()
 
             break;
         }
-        case SAMPLE_END:
+        case TAG_SAMPLE_END:
             skip_bytes(in, size);
             return sv_bless(newRV_inc((SV *) sample), st_stash);
         }
@@ -264,6 +287,7 @@ void TraceFileWriter::open(const std::string &path, bool is_template)
     out = fopen(output_file.c_str(), "w");
     write_bytes(out, MAGIC, sizeof(MAGIC) - 1);
     write_varint(out, VERSION);
+    write_byte(out, TAG_HEADER_SEPARATOR);
 }
 
 void TraceFileWriter::close()
@@ -283,7 +307,7 @@ void TraceFileWriter::start_sample(pTHX_ unsigned int weight, OP *current_op)
 {
     const char *op_name = current_op ? OP_NAME(current_op) : NULL;
 
-    write_byte(out, SAMPLE_START);
+    write_byte(out, TAG_SAMPLE_START);
     write_varint(out, varint_size(weight) + string_size(op_name));
     write_varint(out, weight);
     write_string(out, op_name, false);
@@ -291,7 +315,7 @@ void TraceFileWriter::start_sample(pTHX_ unsigned int weight, OP *current_op)
 
 void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
 {
-    write_byte(out, SUB_FRAME);
+    write_byte(out, TAG_SUB_FRAME);
     const char *file = OutCopFILE(line);
     size_t file_size = strlen(file);
     int lineno = CopLINE(line);
@@ -312,8 +336,13 @@ void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
 
             if (stash) {
                 package = HvNAME(stash);
+#if PERL_SUBVERSION >= 16
                 package_utf8 = HvNAMEUTF8(stash);
                 package_size = HvNAMELEN(stash);
+#else
+                package_utf8 = 0;
+                package_size = strlen(package);
+#endif
             }
             name = GvNAME(egv);
             name_utf8 = GvNAMEUTF8(egv);
@@ -342,6 +371,6 @@ void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
 
 void TraceFileWriter::end_sample()
 {
-    write_byte(out, SAMPLE_END);
+    write_byte(out, TAG_SAMPLE_END);
     write_varint(out, 0);
 }
