@@ -146,10 +146,10 @@ namespace {
 }
 
 
-TraceFileReader::TraceFileReader(const std::string &path)
-  : file_version(0)
+TraceFileReader::TraceFileReader(pTHX)
+  : in(NULL), file_version(0)
 {
-    open(path);
+    SET_THX_MEMBER
 }
 
 TraceFileReader::~TraceFileReader()
@@ -159,9 +159,15 @@ TraceFileReader::~TraceFileReader()
 
 void TraceFileReader::open(const std::string &path)
 {
+    close();
+    in = fopen(path.c_str(), "r");
+    read_header();
+}
+
+void TraceFileReader::read_header()
+{
     char magic[sizeof(MAGIC) - 1];
 
-    in = fopen(path.c_str(), "r");
     if (fread(magic, 1, sizeof(magic), in) != sizeof(magic))
         croak("Unexpected end-of-file while reading file magic");
     if (strncmp(magic, MAGIC, sizeof(magic)))
@@ -191,7 +197,6 @@ void TraceFileReader::close()
 
 SV *TraceFileReader::read_trace()
 {
-    dTHX;
     // This could possibly be cached across read_trace calls and may
     // be worthwhile if there's lots.
     HV *st_stash = gv_stashpv("Devel::StatProfiler::StackTrace", 0);
@@ -257,9 +262,10 @@ SV *TraceFileReader::read_trace()
 }
 
 
-TraceFileWriter::TraceFileWriter(const string &path, bool is_template) :
+TraceFileWriter::TraceFileWriter(pTHX_ const string &path, bool is_template) :
     out(NULL)
 {
+    SET_THX_MEMBER
     seed = rand_seed();
     open(path, is_template);
 }
@@ -285,6 +291,12 @@ void TraceFileWriter::open(const std::string &path, bool is_template)
     }
 
     out = fopen(output_file.c_str(), "w");
+
+    write_header();
+}
+
+void TraceFileWriter::write_header()
+{
     write_bytes(out, MAGIC, sizeof(MAGIC) - 1);
     write_varint(out, VERSION);
     write_byte(out, TAG_HEADER_SEPARATOR);
@@ -303,7 +315,7 @@ void TraceFileWriter::close()
     out = NULL;
 }
 
-void TraceFileWriter::start_sample(pTHX_ unsigned int weight, OP *current_op)
+void TraceFileWriter::start_sample(unsigned int weight, OP *current_op)
 {
     const char *op_name = current_op ? OP_NAME(current_op) : NULL;
 
