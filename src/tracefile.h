@@ -12,6 +12,12 @@
 
 namespace devel {
     namespace statprofiler {
+        typedef struct {
+            int revision;
+            int version;
+            int subversion;
+        } PerlVersion_t;
+
         class TraceFileReader
         {
         public:
@@ -23,33 +29,45 @@ namespace devel {
             void close();
             bool is_valid() const { return in; }
 
-            unsigned int version() const { return file_version; }
+            unsigned int get_format_version() const { return file_format_version; }
+            const PerlVersion_t& get_source_perl_version() const { return source_perl_version; }
+            int get_source_tick_duration() const { return source_tick_duration; }
+            int get_source_stack_sample_depth() const { return source_stack_sample_depth; }
 
             SV *read_trace();
         private:
             void read_header();
 
             std::FILE *in;
-            unsigned int file_version;
+            // TODO maybe introduce a header struct or class for cleanliness?
+            unsigned int file_format_version;
+            PerlVersion_t source_perl_version;
+            int source_tick_duration;
+            int source_stack_sample_depth;
+
             DECL_THX_MEMBER
         };
 
         class TraceFileWriter
         {
         public:
+            // Usage in this order: Construct object, open, write_header, write samples
             TraceFileWriter(pTHX_ const std::string &path, bool is_template);
             ~TraceFileWriter();
 
-            void open(const std::string &path, bool is_template);
+            int open(const std::string &path, bool is_template);
             void close();
             bool is_valid() const { return out; }
 
-            void start_sample(unsigned int weight, OP *current_op);
-            void add_frame(unsigned int cxt_type, CV *sub, COP *line);
-            void end_sample();
+            int write_header(unsigned int sampling_interval,
+                             unsigned int stack_collect_depth);
+
+            int start_sample(unsigned int weight, OP *current_op);
+            int add_frame(unsigned int cxt_type, CV *sub, COP *line);
+            int end_sample();
 
         private:
-            void write_header();
+            int write_perl_version();
 
             std::FILE *out;
             std::string output_file;

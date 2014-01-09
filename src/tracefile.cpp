@@ -8,7 +8,7 @@ using namespace devel::statprofiler;
 using namespace std;
 
 #define MAGIC   "=statprofiler"
-#define VERSION 1
+#define FORMAT_VERSION 1
 
 #if PERL_SUBVERSION < 16
 # ifndef GvNAMEUTF8
@@ -17,10 +17,19 @@ using namespace std;
 #endif
 
 enum {
-    TAG_SAMPLE_START     = 1,
-    TAG_SAMPLE_END       = 2,
-    TAG_SUB_FRAME        = 3,
-    TAG_HEADER_SEPARATOR = 254,
+    TAG_SAMPLE_START            = 1,
+    TAG_SAMPLE_END              = 2,
+    TAG_SUB_FRAME               = 3,
+    TAG_EVAL_FRAME              = 4, // TODO implement
+    TAG_SECTION_START           = 198, // TODO implement
+    TAG_SECTION_END             = 199, // TODO implement
+    TAG_CUSTOM_META             = 200, // TODO implement
+    TAG_META_PERL_VERSION       = 201, // TODO implement
+    TAG_META_TICK_DURATION      = 202, // TODO implement
+    TAG_META_STACK_SAMPLE_DEPTH = 203, // TODO implement
+    TAG_META_LIBRARY_VERSION    = 204, // TODO implement
+    TAG_HEADER_SEPARATOR        = 254,
+    TAG_TAG_CONTINUATION        = 255 // just reserved for now
 };
 
 namespace {
@@ -109,17 +118,17 @@ namespace {
         return sv;
     }
 
-    void write_bytes(FILE *out, const char *bytes, size_t size)
+    int write_bytes(FILE *out, const char *bytes, size_t size)
     {
-        fwrite(bytes, 1, size, out);
+        return fwrite(bytes, 1, size, out) != 0;
     }
 
-    void write_byte(FILE *out, const char byte)
+    int write_byte(FILE *out, const char byte)
     {
-        fwrite(&byte, 1, 1, out);
+        return fwrite(&byte, 1, 1, out) != 0;
     }
 
-    void write_varint(FILE *out, int value)
+    int write_varint(FILE *out, int value)
     {
         char buffer[10], *curr = &buffer[sizeof(buffer) - 1];
 
@@ -129,27 +138,32 @@ namespace {
         } while (value);
 
         buffer[sizeof(buffer) - 1] &= 0x7f;
-        write_bytes(out, curr + 1, (buffer + sizeof(buffer)) - (curr + 1));
+        return write_bytes(out, curr + 1, (buffer + sizeof(buffer)) - (curr + 1));
     }
 
-    void write_string(FILE *out, const char *value, size_t length, bool utf8)
+    int write_string(FILE *out, const char *value, size_t length, bool utf8)
     {
-        write_byte(out, utf8 ? 1 : 0);
-        write_varint(out, length);
-        write_bytes(out, value, length);
+        int status = 0;
+        status += write_byte(out, utf8 ? 1 : 0);
+        status += write_varint(out, length);
+        status += write_bytes(out, value, length);
+        return status;
     }
 
-    void write_string(FILE *out, const char *value, bool utf8)
+    int write_string(FILE *out, const char *value, bool utf8)
     {
-        write_string(out, value, value ? strlen(value) : 0, utf8);
+        return write_string(out, value, value ? strlen(value) : 0, utf8);
     }
 }
 
 
 TraceFileReader::TraceFileReader(pTHX)
-  : in(NULL), file_version(0)
+  : in(NULL), file_format_version(0)
 {
     SET_THX_MEMBER
+    source_perl_version.revision = 0;
+    source_perl_version.version = 0;
+    source_perl_version.subversion = 0;
 }
 
 TraceFileReader::~TraceFileReader()
@@ -173,19 +187,46 @@ void TraceFileReader::read_header()
     if (strncmp(magic, MAGIC, sizeof(magic)))
         croak("Invalid file magic");
 
-    int version_from_file = read_varint(in);
     // In future, will check that the version is at least not newer
     // than this library's file format version. That's necessary even
     // if there's a backcompat layer.
-    if (version_from_file < 1 || version_from_file > VERSION)
+    int version_from_file = read_varint(in);
+    if (version_from_file < 1 || version_from_file > FORMAT_VERSION)
         croak("Incompatible file format version %i", version_from_file);
 
-    file_version = (unsigned int)version_from_file;
+    file_format_version = (unsigned int)version_from_file;
 
     // TODO this becomes a loop reading header records
-    int separator = fgetc(in);
-    if (separator != TAG_HEADER_SEPARATOR)
-        croak("Invalid file: Header does not end with header separator byte");
+    bool cont = 1;
+    while (cont) {
+        const int tag = fgetc(in);
+
+        switch (tag) {
+        case EOF:
+            croak("Invalid input file: File ends before end of file header");
+        case TAG_HEADER_SEPARATOR:
+            cont = 0;
+            break;
+
+        case TAG_META_PERL_VERSION: {
+            source_perl_version.revision   = read_varint(in);
+            source_perl_version.version    = read_varint(in);
+            source_perl_version.subversion = read_varint(in);
+            break;
+        }
+        case TAG_META_TICK_DURATION: {
+            source_tick_duration = read_varint(in);
+            break;
+        }
+        case TAG_META_STACK_SAMPLE_DEPTH: {
+            source_stack_sample_depth = read_varint(in);
+            break;
+        }
+
+        default:
+            croak("Invalid input file: Invalid header record tag (%i)", tag);
+        }
+    }
 }
 
 void TraceFileReader::close()
@@ -275,7 +316,7 @@ TraceFileWriter::~TraceFileWriter()
     close();
 }
 
-void TraceFileWriter::open(const std::string &path, bool is_template)
+int TraceFileWriter::open(const std::string &path, bool is_template)
 {
     close();
     output_file = path;
@@ -291,15 +332,40 @@ void TraceFileWriter::open(const std::string &path, bool is_template)
     }
 
     out = fopen(output_file.c_str(), "w");
+    if (!out)
+        return 1;
 
-    write_header();
+    return 0;
 }
 
-void TraceFileWriter::write_header()
+int TraceFileWriter::write_perl_version()
 {
-    write_bytes(out, MAGIC, sizeof(MAGIC) - 1);
-    write_varint(out, VERSION);
-    write_byte(out, TAG_HEADER_SEPARATOR);
+    int status = 0;
+    status += write_byte(out, TAG_META_PERL_VERSION);
+    status += write_varint(out, PERL_REVISION);
+    status += write_varint(out, PERL_VERSION);
+    status += write_varint(out, PERL_SUBVERSION);
+    return status;
+}
+
+int TraceFileWriter::write_header(unsigned int sampling_interval,
+                                  unsigned int stack_collect_depth)
+{
+    int status = 0;
+    status += write_bytes(out, MAGIC, sizeof(MAGIC) - 1);
+    status += write_varint(out, FORMAT_VERSION);
+
+    // Write meta data: Perl version, tick duration, stack sample depth
+    status += write_perl_version();
+
+    status += write_byte(out, TAG_META_TICK_DURATION);
+    status += write_varint(out, sampling_interval);
+
+    status += write_byte(out, TAG_META_STACK_SAMPLE_DEPTH);
+    status += write_varint(out, stack_collect_depth);
+
+    status += write_byte(out, TAG_HEADER_SEPARATOR);
+    return status;
 }
 
 void TraceFileWriter::close()
@@ -315,22 +381,27 @@ void TraceFileWriter::close()
     out = NULL;
 }
 
-void TraceFileWriter::start_sample(unsigned int weight, OP *current_op)
+int TraceFileWriter::start_sample(unsigned int weight, OP *current_op)
 {
     const char *op_name = current_op ? OP_NAME(current_op) : NULL;
+    int status = 0;
 
-    write_byte(out, TAG_SAMPLE_START);
-    write_varint(out, varint_size(weight) + string_size(op_name));
-    write_varint(out, weight);
-    write_string(out, op_name, false);
+    status += write_byte(out, TAG_SAMPLE_START);
+    status += write_varint(out, varint_size(weight) + string_size(op_name));
+    status += write_varint(out, weight);
+    status += write_string(out, op_name, false);
+
+    return status;
 }
 
-void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
+int TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
 {
-    write_byte(out, TAG_SUB_FRAME);
     const char *file = OutCopFILE(line);
     size_t file_size = strlen(file);
     int lineno = CopLINE(line);
+    int status = 0;
+
+    status += write_byte(out, TAG_SUB_FRAME);
 
     // require: cx->blk_eval.old_namesv
     // mPUSHs(newSVsv(cx->blk_eval.old_namesv));
@@ -361,28 +432,32 @@ void TraceFileWriter::add_frame(unsigned int cxt_type, CV *sub, COP *line)
             name_size = GvNAMELEN(egv);
 	}
 
-        write_varint(out, string_size(package_size) +
-                     string_size(name_size) +
-                     string_size(file_size) +
-                     varint_size(lineno));
-        write_string(out, package, package_size, package_utf8);
-        write_string(out, name, name_size, name_utf8);
-        write_string(out, file, file_size, false);
-        write_varint(out, lineno);
+        status += write_varint(out, string_size(package_size) +
+                                    string_size(name_size) +
+                                    string_size(file_size) +
+                                    varint_size(lineno));
+        status += write_string(out, package, package_size, package_utf8);
+        status += write_string(out, name, name_size, name_utf8);
+        status += write_string(out, file, file_size, false);
+        status += write_varint(out, lineno);
     } else {
-        write_varint(out, string_size(0) +
-                     string_size(0) +
-                     string_size(file_size) +
-                     varint_size(lineno));
-        write_string(out, "", 0, false);
-        write_string(out, "", 0, false);
-        write_string(out, file, file_size, false);
-        write_varint(out, lineno);
+        status += write_varint(out, string_size(0) +
+                                    string_size(0) +
+                                    string_size(file_size) +
+                                    varint_size(lineno));
+        status += write_string(out, "", 0, false);
+        status += write_string(out, "", 0, false);
+        status += write_string(out, file, file_size, false);
+        status += write_varint(out, lineno);
     }
+
+    return status;
 }
 
-void TraceFileWriter::end_sample()
+int TraceFileWriter::end_sample()
 {
-    write_byte(out, TAG_SAMPLE_END);
-    write_varint(out, 0);
+    int status = 0;
+    status += write_byte(out, TAG_SAMPLE_END);
+    status += write_varint(out, 0);
+    return status;
 }
