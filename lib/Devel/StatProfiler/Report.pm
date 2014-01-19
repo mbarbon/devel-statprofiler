@@ -93,12 +93,12 @@ sub _sub {
     # count the number of subroutines of a certain package defined per
     # file, used as an heuristic for where to display xsub time
     if ($sub && $file) {
-        my $package = $frame->package;
-        $self->{aggregate}{file_map}{$package}{$file}++;
+        $self->{aggregate}{file_map}{$frame->package}{$file}++;
     }
 
     return $self->{aggregate}{subs}{$id} ||= {
         name       => $name,
+        package    => $frame->package,
         file       => $file,
         inclusive  => 0,
         exclusive  => 0,
@@ -235,9 +235,7 @@ sub _finalize {
                       values %{$self->{aggregate}{subs}}) {
         # set the file for the xsub
         if ($sub->{kind} == 1) {
-            my ($package) = $sub->{name} =~ m{^(.*)::[^:]+};
-
-            $sub->{file} = $package_map{$package} // '';
+            $sub->{file} = $package_map{$sub->{package}} // '';
         }
 
         my ($exclusive, $inclusive, $callees) = @{$sub->{lines}}{qw(exclusive inclusive callees)};
