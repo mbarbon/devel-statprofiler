@@ -86,7 +86,7 @@ sub _sub_id {
 
 sub _sub {
     my ($self, $frame) = @_;
-    my ($sub, $file) = ($frame->fq_subroutine, $frame->file);
+    my ($sub, $file) = ($frame->fq_sub_name, $frame->file);
     my $name = $sub || $file . ':main';
     my $id = $frame->id || $name;
 
@@ -149,7 +149,8 @@ EOT
             unshift @$frames, bless {
                 id         => $frames->[0]->file . ":CORE::$op_name",
                 "package"  => "CORE",
-                subroutine => $op_name,
+                sub_name   => $op_name,
+                fq_sub_name=> "CORE::$op_name",
                 file       => $frames->[0]->file,
                 line       => -2,
             }, 'Devel::StatProfiler::StackFrame';
@@ -195,7 +196,7 @@ EOT
         }
 
         if ($flames) {
-            my $key = join ';', map { $_->fq_subroutine || 'MAIN' } reverse @$frames;
+            my $key = join ';', map { $_->fq_sub_name || 'MAIN' } reverse @$frames;
 
             $flames->{$key} += $weight;
         }

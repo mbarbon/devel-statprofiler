@@ -332,13 +332,13 @@ SV *TraceFileReader::read_trace()
                 SvREFCNT_inc(package);
                 SvREFCNT_inc(name);
                 hv_stores(frame, "package", package);
-                hv_stores(frame, "subroutine", name);
-                hv_stores(frame, "fq_subroutine", fullname);
+                hv_stores(frame, "sub_name", name);
+                hv_stores(frame, "fq_sub_name", fullname);
             }
             else {
                 hv_stores(frame, "package", newSVpvn("", 0));
-                hv_stores(frame, "subroutine", newSVpvn("", 0));
-                hv_stores(frame, "fq_subroutine", newSVpvn("", 0));
+                hv_stores(frame, "sub_name", newSVpvn("", 0));
+                hv_stores(frame, "fq_sub_name", newSVpvn("", 0));
             }
 
             hv_stores(frame, "file", SvREFCNT_inc(file));

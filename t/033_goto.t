@@ -31,29 +31,29 @@ eq_or_diff($samples[0][2], bless {
     line          => $l1,
     file          => __FILE__,
     package       => '',
-    subroutine    => '',
-    fq_subroutine => '',
+    sub_name      => '',
+    fq_sub_name   => '',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][2], bless {
     line          => $l4,
     file          => __FILE__,
     package       => 'main',
-    subroutine    => 'bar',
-    fq_subroutine => 'main::bar',
+    sub_name      => 'bar',
+    fq_sub_name   => 'main::bar',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][3], bless {
     line          => $l2,
     file          => __FILE__,
     package       => '',
-    subroutine    => '',
-    fq_subroutine => '',
+    sub_name      => '',
+    fq_sub_name   => '',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[2][2], bless {
     line          => $l3,
     file          => __FILE__,
     package       => '',
-    subroutine    => '',
-    fq_subroutine => '',
+    sub_name      => '',
+    fq_sub_name   => '',
 }, 'Devel::StatProfiler::StackFrame');
 
 done_testing();

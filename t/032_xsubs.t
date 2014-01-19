@@ -57,8 +57,8 @@ my $xsub = bless {
     line          => -1,
     file          => '',
     package       => 'Time::HiRes',
-    subroutine    => 'usleep',
-    fq_subroutine => 'Time::HiRes::usleep',
+    sub_name      => 'usleep',
+    fq_sub_name   => 'Time::HiRes::usleep',
 }, 'Devel::StatProfiler::StackFrame';
 
 eq_or_diff($samples[0][0], $xsub);
