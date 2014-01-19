@@ -35,22 +35,25 @@ Devel::StatProfiler::stop_profile();
 my @samples = get_samples($profile_file);
 
 eq_or_diff($samples[0][2], bless {
-    line       => $l3,
-    file       => __FILE__,
-    package    => 'main',
-    subroutine => 'foo',
+    line          => $l3,
+    file          => __FILE__,
+    package       => 'main',
+    subroutine    => 'foo',
+    fq_subroutine => 'main::foo',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][2], bless {
-    line       => $l2,
-    file       => __FILE__,
-    package    => 'Moo',
-    subroutine => 'bar',
+    line          => $l2,
+    file          => __FILE__,
+    package       => 'Moo',
+    subroutine    => 'bar',
+    fq_subroutine => 'Moo::bar',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[2][2], bless {
-    line       => $l1,
-    file       => __FILE__,
-    package    => 'X',
-    subroutine => '__ANON__',
+    line          => $l1,
+    file          => __FILE__,
+    package       => 'X',
+    subroutine    => '__ANON__',
+    fq_subroutine => 'X::__ANON__',
 }, 'Devel::StatProfiler::StackFrame');
 
 done_testing();

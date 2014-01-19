@@ -28,28 +28,32 @@ Devel::StatProfiler::stop_profile();
 my @samples = get_samples('tprof.out');
 
 eq_or_diff($samples[0][2], bless {
-    line       => $l1,
-    file       => __FILE__,
-    package    => '',
-    subroutine => '',
+    line          => $l1,
+    file          => __FILE__,
+    package       => '',
+    subroutine    => '',
+    fq_subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][2], bless {
-    line       => $l4,
-    file       => __FILE__,
-    package    => 'main',
-    subroutine => 'bar',
+    line          => $l4,
+    file          => __FILE__,
+    package       => 'main',
+    subroutine    => 'bar',
+    fq_subroutine => 'main::bar',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][3], bless {
-    line       => $l2,
-    file       => __FILE__,
-    package    => '',
-    subroutine => '',
+    line          => $l2,
+    file          => __FILE__,
+    package       => '',
+    subroutine    => '',
+    fq_subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[2][2], bless {
-    line       => $l3,
-    file       => __FILE__,
-    package    => '',
-    subroutine => '',
+    line          => $l3,
+    file          => __FILE__,
+    package       => '',
+    subroutine    => '',
+    fq_subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 
 done_testing();

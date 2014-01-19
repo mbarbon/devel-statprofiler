@@ -28,29 +28,33 @@ my ($sub) = grep $_->[2]->line == $l1, @samples;
 my ($block) = grep $_->[2]->line == $l2, @samples;
 
 eq_or_diff($sub->[2], bless {
-    file       => __FILE__,
-    line       => $l1,
-    package    => 'main',
-    subroutine => 'odd',
+    file          => __FILE__,
+    line          => $l1,
+    package       => 'main',
+    subroutine    => 'odd',
+    fq_subroutine => 'main::odd',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($sub->[3], bless {
-    file       => __FILE__,
-    line       => $l4,
-    package    => '',
-    subroutine => '',
+    file          => __FILE__,
+    line          => $l4,
+    package       => '',
+    subroutine    => '',
+    fq_subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 
 eq_or_diff($block->[2], bless {
-    file       => __FILE__,
-    line       => $l2,
-    package    => 'main',
-    subroutine => '__ANON__',
+    file          => __FILE__,
+    line          => $l2,
+    package       => 'main',
+    subroutine    => '__ANON__',
+    fq_subroutine => 'main::__ANON__',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($block->[3], bless {
-    file       => __FILE__,
-    line       => $l3,
-    package    => '',
-    subroutine => '',
+    file          => __FILE__,
+    line          => $l3,
+    package       => '',
+    subroutine    => '',
+    fq_subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 
 done_testing();
