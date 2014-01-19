@@ -37,17 +37,20 @@ my @samples = get_samples($profile_file);
 eq_or_diff($samples[0][2], bless {
     line       => $l3,
     file       => __FILE__,
-    subroutine => 'main::foo',
+    package    => 'main',
+    subroutine => 'foo',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[1][2], bless {
     line       => $l2,
     file       => __FILE__,
-    subroutine => 'Moo::bar',
+    package    => 'Moo',
+    subroutine => 'bar',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($samples[2][2], bless {
     line       => $l1,
     file       => __FILE__,
-    subroutine => 'X::__ANON__',
+    package    => 'X',
+    subroutine => '__ANON__',
 }, 'Devel::StatProfiler::StackFrame');
 
 done_testing();

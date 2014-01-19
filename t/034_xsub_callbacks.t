@@ -30,22 +30,26 @@ my ($block) = grep $_->[2]->line == $l2, @samples;
 eq_or_diff($sub->[2], bless {
     file       => __FILE__,
     line       => $l1,
-    subroutine => 'main::odd',
+    package    => 'main',
+    subroutine => 'odd',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($sub->[3], bless {
     file       => __FILE__,
     line       => $l4,
+    package    => '',
     subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 
 eq_or_diff($block->[2], bless {
     file       => __FILE__,
     line       => $l2,
-    subroutine => 'main::__ANON__',
+    package    => 'main',
+    subroutine => '__ANON__',
 }, 'Devel::StatProfiler::StackFrame');
 eq_or_diff($block->[3], bless {
     file       => __FILE__,
     line       => $l3,
+    package    => '',
     subroutine => '',
 }, 'Devel::StatProfiler::StackFrame');
 

@@ -56,7 +56,8 @@ my @samples = get_samples('tprof.out');
 my $xsub = bless {
     line       => -1,
     file       => '',
-    subroutine => 'Time::HiRes::usleep',
+    package    => 'Time::HiRes',
+    subroutine => 'usleep',
 }, 'Devel::StatProfiler::StackFrame';
 
 eq_or_diff($samples[0][0], $xsub);

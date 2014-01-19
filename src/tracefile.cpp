@@ -322,17 +322,15 @@ SV *TraceFileReader::read_trace()
             HV *frame = newHV();
 
             if (SvCUR(package) || SvCUR(name)) {
-                SV *fullname = newSV(SvCUR(package) + 2 + SvCUR(name));
-
-                SvPOK_on(fullname);
-                sv_catsv(fullname, package);
-                sv_catpvn(fullname, "::", 2);
-                sv_catsv(fullname, name);
-
-                hv_stores(frame, "subroutine", fullname);
+                SvREFCNT_inc(package);
+                SvREFCNT_inc(name);
+                hv_stores(frame, "package", package);
+                hv_stores(frame, "subroutine", name);
             }
-            else
+            else {
+                hv_stores(frame, "package", newSVpvn("", 0));
                 hv_stores(frame, "subroutine", newSVpvn("", 0));
+            }
 
             hv_stores(frame, "file", SvREFCNT_inc(file));
             hv_stores(frame, "line", newSViv(line));

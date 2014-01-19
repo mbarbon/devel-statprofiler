@@ -86,16 +86,14 @@ sub _sub_id {
 
 sub _sub {
     my ($self, $frame) = @_;
-    my ($sub, $file) = ($frame->subroutine, $frame->file);
+    my ($sub, $file) = ($frame->fq_subroutine, $frame->file);
     my $name = $sub || $file . ':main';
     my $id = $frame->id || $name;
 
     # count the number of subroutines of a certain package defined per
     # file, used as an heuristic for where to display xsub time
     if ($sub && $file) {
-        # TODO in the binary format there should be a 'package' accessor
-        my ($package) = $sub =~ m{^(.*)::[^:]+};
-
+        my $package = $frame->package;
         $self->{aggregate}{file_map}{$package}{$file}++;
     }
 
@@ -150,7 +148,8 @@ EOT
         if ($slowops->{my $op_name = $trace->op_name}) {
             unshift @$frames, bless {
                 id         => $frames->[0]->file . ":CORE::$op_name",
-                subroutine => "CORE::$op_name",
+                "package"  => "CORE",
+                subroutine => $op_name,
                 file       => $frames->[0]->file,
                 line       => -2,
             }, 'Devel::StatProfiler::StackFrame';
@@ -196,7 +195,7 @@ EOT
         }
 
         if ($flames) {
-            my $key = join ';', map { $_->subroutine || 'MAIN' } reverse @$frames;
+            my $key = join ';', map { $_->fq_subroutine || 'MAIN' } reverse @$frames;
 
             $flames->{$key} += $weight;
         }
@@ -236,7 +235,6 @@ sub _finalize {
                       values %{$self->{aggregate}{subs}}) {
         # set the file for the xsub
         if ($sub->{kind} == 1) {
-            # TODO in the binary format there should be a 'package' accessor
             my ($package) = $sub->{name} =~ m{^(.*)::[^:]+};
 
             $sub->{file} = $package_map{$package} // '';
