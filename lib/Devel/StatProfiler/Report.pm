@@ -375,6 +375,8 @@ sub map_source {
     my $file_map = $self->{aggregate}{file_map};
     my %eval_map;
 
+    $self->{sourcemap}->map_source($self->{source}, $self->{process_id});
+
     for my $file (keys %$files) {
         my $hash = $self->{source}->get_hash_by_name($self->{process_id}, $file);
 

@@ -101,6 +101,24 @@ sub add_sources_from_reader {
     }
 }
 
+sub map_source {
+    my ($self, $sources, $process_id) = @_;
+
+    for my $key (keys %{$self->{map}}) {
+        for my $entry (@{$self->{map}{$key}}) {
+            if ($entry->[1]) { # skip sentinel entry for last line
+                my $hash = $sources->get_hash_by_name($process_id, $entry->[1]);
+
+                if ($hash) {
+                    delete $self->{reverse_map}{$entry->[1]};
+                    $entry->[1] = "eval:$hash";
+                    $self->{reverse_map}{"eval:$hash"}{$key} = 1;
+                }
+            }
+        }
+    }
+}
+
 sub save {
     my ($self, $root_dir) = @_;
     my $state_dir = File::Spec::Functions::catdir($root_dir, '__state__');
