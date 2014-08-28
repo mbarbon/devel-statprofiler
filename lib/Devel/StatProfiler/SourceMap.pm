@@ -42,6 +42,7 @@ sub end_file_mapping {
     my ($self, $physical_line) = @_;
 
     if (my $map = $self->{current_map}) {
+        # XXX preserve the mapping for the "principal" file
         delete $self->{map}{$self->{current_file}}
             if $map->[0] == 1 && $map->[1] eq $self->{current_file} && $map->[2] == 1;
     }
@@ -109,6 +110,7 @@ sub map_source {
             if ($entry->[1]) { # skip sentinel entry for last line
                 my $hash = $sources->get_hash_by_name($process_id, $entry->[1]);
 
+                # XXX don't overwrite the mapping for the "principal" file
                 if ($hash) {
                     delete $self->{reverse_map}{$entry->[1]};
                     $entry->[1] = "eval:$hash";
@@ -133,6 +135,7 @@ sub load_and_merge {
     my $data = read_data($self->{serializer}, $file);
 
     for my $key (keys %$data) {
+        # XXX don't overwrite the mapping for the "principal" file
         $self->{map}{$key} = $data->{$key};
 
         for my $entry (@{$data->{$key}}) {
@@ -152,6 +155,7 @@ sub get_reverse_mapping {
     my ($self, $file) = @_;
 
     return unless $self->{reverse_map}{$file};
+    # XXX return the mapping for the "principal" file if present
     return (keys %{$self->{reverse_map}{$file}})[0];
 }
 
