@@ -53,7 +53,6 @@ sub new {
             subs      => {},
             flames    => {},
             files     => {},
-            finalized => 0,
         },
         $opts{sources} ? (
             source    => Devel::StatProfiler::EvalSource->new(
@@ -656,12 +655,7 @@ sub _fileify {
     return "$base-$id";
 }
 
-sub finalize {
-    my ($self) = @_;
-
-    die "Reports can only be finalized once" if $self->{aggregate}{finalized};
-    $self->{aggregate}{finalized} = 1;
-}
+sub finalize { } # stub for backwards compatibility
 
 sub fetch_source_from_file {
     my ($self, $path) = @_;
@@ -855,7 +849,6 @@ sub output {
 
     File::Path::mkpath([$directory]);
 
-    $self->finalize;
     my $files = $self->{aggregate}{files};
     my @subs = sort { $b->{exclusive} <=> $a->{exclusive} ||
                       $b->{inclusive} <=> $a->{inclusive} }
