@@ -476,6 +476,66 @@ sub merged_report_metadata {
     return $res;
 }
 
+sub discard_expired_process_data {
+    my ($self, $expiration) = @_;
+    my @shards = __PACKAGE__->shards($self->{root_dir});
+    my $aggregator = __PACKAGE__->new(
+        root_directory => $self->{root_dir},
+        shards         => \@shards,
+        serializer     => $self->{serializer},
+    );
+
+    $aggregator->_load_last_sample;
+    $aggregator->_load_genealogy;
+    $aggregator->_load_sourcemap;
+
+    # Map eval sources, so we can discard eval map
+    for my $report_id ($self->all_reports) {
+        my $report_dir = File::Spec::Functions::catdir($self->{root_dir}, $report_id);
+        my $report = $self->merged_report($report_id);
+
+        $report->map_source($aggregator->{source});
+        $report->save_aggregate($report_dir);
+    }
+
+    my $last_sample = $aggregator->{last_sample};
+    my $genealogy = $aggregator->{genealogy};
+
+    # Recursively propagate last sample time to parent processes
+    my @queue = keys %$last_sample;
+    while (@queue) {
+        my %updated;
+
+        for my $process_id (@queue) {
+            my $parent = $genealogy->{$process_id}{1};
+            my $parent_id = $parent->[0];
+
+            next if $parent_id eq "00" x 24;
+            unless ($parent_id) {
+                warn "Broken genealogy: '$process_id' has no parent";
+                next;
+            }
+            $updated{$parent_id} = undef;
+            $last_sample->{$parent_id} = $last_sample->{$process_id}
+                if $last_sample->{$parent_id} < $last_sample->{$process_id};
+        }
+
+        @queue = keys %updated;
+    }
+
+    for my $process_id (keys %$genealogy) {
+        next if $last_sample->{$process_id} // 0 > $expiration;
+
+        # garbage-collect process-related metadata, under the
+        # assumption that if that neither the process nor its childs
+        # produced any samples in the given timeframe, they are "dead"
+        delete $self->{genealogy}{$process_id};
+        $self->{source}->delete_process($process_id);
+    }
+
+    # TODO Garbage-collect eval source code
+}
+
 sub _merge_report {
     my ($self, $report_id, $report) = @_;
 
