@@ -827,7 +827,6 @@ sub _callees_by_file {
 
     for my $sub_name (map keys %$_, values %{$file_entry->{subs}}) {
         my $sub = $self->{aggregate}{subs}{$sub_name};
-        use Data::Dumper; print Dumper($sub);
         my $sub_callees = $sub->{callees};
 
         for my $line (keys %$sub_callees) {
