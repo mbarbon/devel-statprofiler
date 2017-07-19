@@ -1,0 +1,143 @@
+# PODNAME: Devel::StatProfiler::ReportStructure - developer documentation for aggregation classes
+
+=head1 DESCRIPTION
+
+B<Developer documentation for aggregation classes>.
+
+=head1 ON-DISK LAYOUT
+
+Multiple aggregated reports for a single code release are stored under
+a single directory. Unless specified, all files are Sereal blobs.
+
+The HTML report generator assumes to be able to fetch the source code
+for files. There is support for reading files directly from disk or
+for fetching them from a local git clone (it uses C<git cat-file>, so
+it can be a bare clone). The file contents need to match the source
+code that was running while collecting profiling data.
+
+The aggregate structure for a single code release report is:
+
+    <release id>/
+        # eval source code
+        __source__/
+        # common state
+        __state__/
+            generalogy.<shard id>
+            last_sample.<shard id>
+            metadata.<shard id>
+            shard.<shard id>
+            sourcemap.<shard id>
+            source.<shard id>
+            processed.<process id>.<shard id>
+        # first aggregation id
+        aggregate1/
+            metadata.<shard id>
+            report.<timebox1>.<shard id>
+            report.<timebox2>.<shard id>
+        # second aggregation id
+        aggregate2/
+        ...
+
+=over 4
+
+=item C<< release id >>
+
+an arbitrary user-provided identifier, for example a Git commit/tag.
+
+=item C<< shard id >>
+
+an arbitrary identifier, for example an host name. Files should be
+written from a single aggregation host, and will be merged together to
+generate the HTML report.
+
+=item C<< timebox >>
+
+a number of seconds since the epoch, old timeboxed data can be deleted
+at user's discretion.
+
+=back
+
+=head2 Aggregate directory
+
+Many of the files below contain refernces to source file/line numbers.
+
+All line numbers are logical line numbers (the ones reported by
+C<warn()>/C<die()>); those generally match physical line numbers,
+except in the presence of C<#line> directives.
+
+Source files of the form C<eval:HASH> refer to the eval source code
+having MD5 hash C<HASH>. There should never be eval references of the
+form C<(eval 123)>.
+
+All other source file references are logical source files (the ones
+reported by C<warn()>/C<die()>); those generally match physical line
+numbers, except in the presence of C<#line> directives.
+
+Generated reports contain an entry for each physical file, so there is
+code in the report generator to piece together multiple logical
+reports into a merged report for a single physical file.
+
+=head2 Report file(s)
+
+The aggregated profiling data, composed mainly of a map from logical
+file names to the per-line count of exclusive/inclusive samples and a
+map from subroutines to call sites and callees.
+
+This is the main data used to generate the HTML report.
+
+=head3 Metadata file(s)
+
+Currently only contains the number of samples aggregated into the
+corresponding report file.
+
+=head2 State directory
+
+=head3 Shard file(s)
+
+Empty flag files, a quick way of enumerating the shards ids.
+
+=head3 Metadata file(s)
+
+User-provided metadata keys, added to the reports using
+C<set_global_metadata> and C<write_custom_metadata>.
+
+=head3 Processed file(s)
+
+State of C<Devel::StatProfiler::SectionChangeReader>, saved when the
+profile data has been split to multiple files and not all files have
+been processed yet.
+
+=head3 Last sample file(s)
+
+Tracks the time at which the last file for a given process id was
+processed. Used to clean up the processing state for
+C<Devel::StatProfiler::SectionChangeReader>.
+
+=head3 Genealogy file(s)
+
+Tracks the parent-child relationship between process ids, used to map
+the eval id (e.g. C<(eval 123)>) to the corresponding source code.
+
+=head3 Source map file(s)
+
+Information about C<#line> directives contained in eval source code,
+used to map a lines as reported in the profile to source code lines
+used during rendering.
+
+For non-eval source code, the corresponding information is parsed from
+the source code files on disk.
+
+=head3 Source file(s)
+
+Maps process ids into a list of evals that were seen by that process,
+and each eval and the hash of the source code. The source code hash
+can be used to to fetch the actual eval source code, and more
+importantly to merge profiling data from multiple independent evals.
+
+=head2 Source directory
+
+Contains a file for each C<eval STRING>; the file is named after the
+MD5 hash of the source code and stored in a 2-level deep directory
+structure. Files are just source code (not Sereal blobs).
+
+=cut
