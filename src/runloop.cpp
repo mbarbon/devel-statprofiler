@@ -840,6 +840,8 @@ write_eval_if_needed(pTHX_ SV *evalcv, MAGIC *mg)
         }
         collected->saved = true;
     }
+
+    return 0;
 }
 
 static void
