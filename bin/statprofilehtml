@@ -5,17 +5,9 @@
 use 5.12.0;
 use warnings;
 
-use Devel::StatProfiler::Report;
+use Devel::StatProfiler::Html;
 
 my @files = @ARGV;
-
-my $outdir = 'statprof';
-
-my $report = Devel::StatProfiler::Report->new(
-    flamegraph      => 1,
-    sources         => 1,
-    mixed_process   => 1,
-);
 
 @files = glob('statprof.out.*')
     if not @files;
@@ -24,14 +16,9 @@ my $report = Devel::StatProfiler::Report->new(
 die "Missing input files (via ARGV or 'statprof.out.*' or 'statprof.out'\n"
     if not @files;
 
-for my $f (@files) {
-    my $r = Devel::StatProfiler::Reader->new($f);
-    $report->add_trace_file($r);
-    $report->map_source($r->get_genealogy_info->[0]);
-}
+Devel::StatProfiler::Html::process_and_output(
+    files   => \@files,
+    output  => 'statprof',
+);
 
-my $diagnostics = $report->output($outdir);
-
-for my $diagnostic (@$diagnostics) {
-    print STDERR $diagnostic, "\n";
-}
+exit 0;
