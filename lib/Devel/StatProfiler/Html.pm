@@ -13,11 +13,16 @@ sub process {
         mixed_process   => 1,
     );
 
+    my %state;
     for my $f (@{$opts{files}}) {
         my $r = Devel::StatProfiler::Reader->new($f);
         my ($process_id) = @{$r->get_genealogy_info};
+        if (my $process_state = $state{$process_id}) {
+            $r->set_reader_state(delete $process_state->{reader_state});
+        }
         $report->add_trace_file($r);
         $report->map_source($process_id);
+        $state{$process_id}->{reader_state} = $r->get_reader_state
     }
 
     return $report;
