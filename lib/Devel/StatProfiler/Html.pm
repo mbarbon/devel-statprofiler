@@ -20,7 +20,15 @@ sub process {
         if (my $process_state = $state{$process_id}) {
             $r->set_reader_state(delete $process_state->{reader_state});
         }
-        $report->add_trace_file($r);
+        eval {
+            $report->add_trace_file($r);
+
+            1;
+        } or do {
+            my $error = $@ || "Zombie error";
+
+            warn sprintf "Error reading trace file '%s': %s'", $f, $error;
+        };
         $report->map_source($process_id);
         $state{$process_id}->{reader_state} = $r->get_reader_state
     }
