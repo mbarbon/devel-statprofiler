@@ -2,6 +2,10 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.51      2020-03-26 18:20:02 CET
+
+    - Make statprofilehtml more resilient to partial profile files
+
 0.50      2016-10-24 12:20:51 CEST
 
     - Fix use-after-free error in Perls compiled without multiplicity
