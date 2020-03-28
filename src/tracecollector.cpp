@@ -95,6 +95,7 @@ devel::statprofiler::collect_trace(pTHX_ TraceFileWriter &trace, int depth, bool
             if ((line != caller->blk_oldcop ||
                         // but make sure it's not a recursive sub
                         cxt != CXt_SUB ||
+                        sub->blk_sub.cv != NULL &&
                         PL_op != CvSTART(sub->blk_sub.cv)) &&
                     // ignore stack frames set up by BEGIN blocks
                     line != &PL_compiling &&
