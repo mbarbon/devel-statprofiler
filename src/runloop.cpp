@@ -327,7 +327,7 @@ Cxt::~Cxt() {
         Perl_croak(aTHX_ "Devel::StatProfiler: deleting context for a running runloop");
     if (original_runloop)
         PL_runops = original_runloop;
-    if (trace && trace->is_valid())
+    if (trace)
         trace->close(TraceFileWriter::write_end_tag);
     delete trace;
 }
@@ -460,6 +460,9 @@ Cxt::pid_changed()
 static void
 restore_section_state(pTHX_ pMY_CXT)
 {
+    if (!MY_CXT.trace->is_valid())
+        return;
+
     char *key;
     I32 klen;
 
@@ -478,11 +481,12 @@ reopen_output_file(pTHX_ pMY_CXT)
 
     MY_CXT.trace->open(MY_CXT.filename, MY_CXT.is_template,
                        MY_CXT.id, MY_CXT.ordinal);
-    MY_CXT.trace->write_header(sampling_interval, stack_collect_depth,
-                               MY_CXT.id, MY_CXT.ordinal, MY_CXT.parent_id, MY_CXT.parent_ordinal,
-                               MY_CXT.global_metadata);
-    MY_CXT.id_written = true;
-
+    if (MY_CXT.trace->is_valid()) {
+        MY_CXT.trace->write_header(sampling_interval, stack_collect_depth,
+                                   MY_CXT.id, MY_CXT.ordinal, MY_CXT.parent_id, MY_CXT.parent_ordinal,
+                                   MY_CXT.global_metadata);
+        MY_CXT.id_written = true;
+    }
     // XXX check if we need to write other metadata
 }
 
@@ -766,6 +770,10 @@ get_cv_from_sv(pTHX_ OP* op, SV *sv, GV **name)
 static void
 collect_sample(pTHX_ pMY_CXT_ TraceFileWriter *trace, unsigned int pred_counter, OP *op, OP *prev_op, SV *called_sv)
 {
+    if (!trace->is_valid()) {
+        return;
+    }
+
     // Makes sure we assign the correct weight to a trace (possibly 0)
     // when an inner runloop already collected a trace for this line
     if (MY_CXT.pred_counter > pred_counter) {
@@ -835,8 +843,8 @@ write_eval_if_needed(pTHX_ SV *evalcv, MAGIC *mg)
             dMY_CXT;
 
             TraceFileWriter *trace = MY_CXT.create_trace(aTHX);
-
-            trace->add_eval_source(eval_text, collected->evalseq);
+            if (trace->is_valid())
+                trace->add_eval_source(eval_text, collected->evalseq);
         }
         collected->saved = true;
     }
@@ -881,7 +889,7 @@ runloop(pTHX)
     TraceFileWriter *trace = MY_CXT.create_trace(aTHX);
 
     if (!trace->is_valid())
-        croak("Failed to open trace file");
+        warn("Failed to open trace file");
 
     OP_ENTRY_PROBE(OP_NAME(op));
     while ((PL_op = op = op->op_ppaddr(aTHX))) {
@@ -901,7 +909,7 @@ runloop(pTHX)
 
     // this is here so XS subs called using Perl_call_sv are correctly
     // tracked (example: tied hash implemented in XS)
-    if (UNLIKELY( counter != pred_counter ) && trace->is_valid()) {
+    if (UNLIKELY( counter != pred_counter )) {
         collect_sample(aTHX_ aMY_CXT_ trace, pred_counter, op, prev_op, called_sv);
     }
 
@@ -1137,7 +1145,7 @@ child_after_fork()
 
     MY_CXT.pid_changed();
     MY_CXT.ordinal = 0;
-    if (running && MY_CXT.trace) {
+    if (running && MY_CXT.trace && MY_CXT.trace->is_valid()) {
         reopen_output_file(aTHX_ aMY_CXT);
         restore_section_state(aTHX_ aMY_CXT);
     }
@@ -1311,8 +1319,9 @@ devel::statprofiler::write_custom_metadata(pTHX_ SV *key, SV *value)
     dMY_CXT;
 
     if (MY_CXT.enabled) {
-        MY_CXT.create_trace(aTHX);
-        MY_CXT.trace->write_custom_metadata(key, value);
+        TraceFileWriter *trace = MY_CXT.create_trace(aTHX);
+        if (trace->is_valid())
+            trace->write_custom_metadata(key, value);
     }
 }
 
@@ -1322,8 +1331,9 @@ devel::statprofiler::start_section(pTHX_ SV *section_name)
     dMY_CXT;
 
     if (MY_CXT.enabled) {
-        MY_CXT.create_trace(aTHX);
-        MY_CXT.trace->start_section(section_name);
+        TraceFileWriter *trace = MY_CXT.create_trace(aTHX);
+        if (trace->is_valid())
+            trace->start_section(section_name);
 
         HE *depth = hv_fetch_ent(MY_CXT.sections, section_name, 1, 0);
         if (!SvOK(HeVAL(depth)))
@@ -1339,8 +1349,9 @@ devel::statprofiler::end_section(pTHX_ SV *section_name)
     dMY_CXT;
 
     if (MY_CXT.enabled) {
-        MY_CXT.create_trace(aTHX);
-        MY_CXT.trace->end_section(section_name);
+        TraceFileWriter *trace =MY_CXT.create_trace(aTHX);
+        if (trace->is_valid())
+            trace->end_section(section_name);
 
         // we don't want to die here on mismatched sections
         HE *depth = hv_fetch_ent(MY_CXT.sections, section_name, 0, 0);
