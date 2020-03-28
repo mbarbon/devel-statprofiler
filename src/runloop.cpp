@@ -1145,7 +1145,7 @@ child_after_fork()
 
     MY_CXT.pid_changed();
     MY_CXT.ordinal = 0;
-    if (running && MY_CXT.trace && MY_CXT.trace->is_valid()) {
+    if (running && MY_CXT.trace) {
         reopen_output_file(aTHX_ aMY_CXT);
         restore_section_state(aTHX_ aMY_CXT);
     }
