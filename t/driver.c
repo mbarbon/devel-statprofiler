@@ -3,7 +3,7 @@
 
 static PerlInterpreter *my_perl;
 
-extern void xs_init(pTHX);
+EXTERN_C void xs_init(pTHX);
 
 int main(int argc, char **argv, char **env)
 {
