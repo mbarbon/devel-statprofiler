@@ -29,8 +29,9 @@ my $a = $r->{aggregate};
 my @traces = map {
     s{__FILE__}{__FILE__}reg =~
     s{\$TAKE_SAMPLE_LINE}{$t::lib::Test::TAKE_SAMPLE_LINE}rg
-} qw(
-    t/lib/Test.pm:main;__FILE__:main::__ANON__:18;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep
+}
+  ($] > 5.038 ? '__FILE__:main;t/lib/Test.pm:t::lib::Test::spawn:226' : 't/lib/Test.pm:main' ) . ';__FILE__:main::__ANON__:18;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep',
+  qw(
     __FILE__:main;__FILE__:main::before:12;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep
     __FILE__:main;__FILE__:main::after:13;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep
 );
