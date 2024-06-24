@@ -945,7 +945,7 @@ SV *TraceFileReader::read_trace()
             if (!depth || !SvOK(HeVAL(depth)) || SvUV(HeVAL(depth)) == 0) {
                 STRLEN len;
                 char *str = SvPV(section_name, len);
-                croak("Invalid input file: Unmatched section end for '%.*s'", len, str);
+                croak("Invalid input file: Unmatched section end for '%.*s'", (int) len, str);
             }
 
             const UV depth_num = SvUV(HeVAL(depth));
