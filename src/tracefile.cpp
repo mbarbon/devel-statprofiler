@@ -418,6 +418,13 @@ namespace {
 
         return SvREFCNT_inc(file);
     }
+
+    bool is_begin(pTHX_ SV *name) {
+        STRLEN len;
+        const char *buf = SvPV(name, len);
+
+        return len == 5 && buf[0] == 'B' && memcmp(buf, "BEGIN", 5) == 0;
+    }
 }
 
 
@@ -729,6 +736,10 @@ SV *TraceFileReader::read_trace()
     vector<SV *> try_eval_remap;
     bool eval_remap = false;
 
+    // in newer Perls, there is always an eval/main stack frame as the
+    // caller of a BEGIN block, while older Perls don't have it
+    bool last_was_begin = false;
+
     // As we read more meta data, we'll build up this hash (which is
     // created lazily below). If there's any, that hash will be returned
     // with the trace as a hash element of the trace ("metadata").
@@ -758,6 +769,9 @@ SV *TraceFileReader::read_trace()
             hv_stores(sample, "frames", newRV_noinc((SV *) frames));
             hv_stores(sample, "weight", newSViv(weight));
             hv_stores(sample, "op_name", SvREFCNT_inc(op_name));
+
+            last_was_begin = false;
+
             break;
         }
         default:
@@ -792,6 +806,8 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "first_line", newSViv(first_line));
             av_push(frames, sv_bless(newRV_noinc((SV *) frame), sf_stash));
 
+            last_was_begin = is_begin(aTHX_ name);
+
             break;
         }
         case TAG_XSUB_FRAME: {
@@ -814,6 +830,8 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "first_line", newSViv(-1));
             av_push(frames, sv_bless(newRV_noinc((SV *) frame), sf_stash));
 
+            last_was_begin = is_begin(aTHX_ name);
+
             break;
         }
         case TAG_EVAL_FRAME: {
@@ -833,7 +851,15 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "file", full_file);
             hv_stores(frame, "file_pretty", SvREFCNT_inc(full_file));
             hv_stores(frame, "line", newSViv(line));
-            av_push(frames, sv_bless(newRV_noinc((SV *) frame), esf_stash));
+
+            // see comment where last_was_begin is defined
+            if (PERL_VERSION < 38 || !last_was_begin) {
+                av_push(frames, sv_bless(newRV_noinc((SV *) frame), esf_stash));
+            } else {
+                SvREFCNT_dec(frame);
+            }
+
+            last_was_begin = false;
 
             break;
         }
@@ -864,7 +890,15 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "file", SvREFCNT_inc(file));
             hv_stores(frame, "file_pretty", SvREFCNT_inc(file));
             hv_stores(frame, "line", newSViv(line));
-            av_push(frames, sv_bless(newRV_noinc((SV *) frame), msf_stash));
+
+            // see comment where last_was_begin is defined
+            if (PERL_VERSION < 38 || !last_was_begin) {
+                av_push(frames, sv_bless(newRV_noinc((SV *) frame), msf_stash));
+            } else {
+                SvREFCNT_dec(frame);
+            }
+
+            last_was_begin = false;
 
             break;
         }
