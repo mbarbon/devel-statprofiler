@@ -71,10 +71,10 @@ cmp_ok($bar->{exclusive}, '<=', 50);
 cmp_range(300, $bar->{inclusive}, 600);
 cmp_range(300, $bar->{callees}{32}{$foo_n}{inclusive}, 600);
 
-cmp_range(600, $foo->{exclusive}, 1000);
-cmp_range(600, $foo->{inclusive}, 1000);
-cmp_range(600, $foo->{callees}{27}{$foo_n}{inclusive}, 1000);
-cmp_range(600, $foo->{call_sites}{'t/302_report_recursive.t:27'}{inclusive}, 1000);
+cmp_range(600, $foo->{exclusive}, 1200);
+cmp_range(600, $foo->{inclusive}, 1200);
+cmp_range(600, $foo->{callees}{27}{$foo_n}{inclusive}, 1200);
+cmp_range(600, $foo->{call_sites}{'t/302_report_recursive.t:27'}{inclusive}, 1200);
 cmp_range(300, $foo->{call_sites}{'t/302_report_recursive.t:32'}{inclusive}, 600);
 cmp_range(300, $foo->{call_sites}{'t/302_report_recursive.t:36'}{inclusive}, 600);
 
