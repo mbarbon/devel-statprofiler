@@ -115,9 +115,12 @@ namespace {
         HV *sections, *global_metadata;
         bool restore_sections, id_written;
         unsigned int pred_counter;
+#ifdef USE_ITHREADS
+        tTHX interp;
+#endif
 
-        Cxt();
-        Cxt(const Cxt &cxt);
+        Cxt(pTHX);
+        Cxt(pTHX_ const Cxt &cxt, CLONE_PARAMS *clone_params);
         ~Cxt();
 
         TraceFileWriter *create_trace(pTHX);
@@ -255,7 +258,7 @@ new_thread_id()
 }
 
 
-Cxt::Cxt() :
+Cxt::Cxt(pTHX) :
     filename("statprof.out"),
     is_template(true),
     enabled(true),
@@ -276,14 +279,16 @@ Cxt::Cxt() :
     pred_counter(0),
     trace(NULL)
 {
-    dTHX;
+#ifdef USE_ITHREADS
+    interp = aTHX;
+#endif
 
     new_id();
 
     sections = newHV();
 }
 
-Cxt::Cxt(const Cxt &cxt) :
+Cxt::Cxt(pTHX_ const Cxt &cxt, CLONE_PARAMS *clone_params) :
     filename(cxt.filename),
     is_template(cxt.is_template),
     enabled(cxt.enabled),
@@ -304,18 +309,19 @@ Cxt::Cxt(const Cxt &cxt) :
     pred_counter(0),
     trace(NULL)
 {
-    dTHX;
+#ifdef USE_ITHREADS
+    interp = aTHX;
 
     new_id();
     memcpy(parent_id, cxt.id, sizeof(id));
-
-    sections = newHV();
-    copy_hv(aTHX_ cxt.sections, sections);
+    sections = MUTABLE_HV(sv_dup_inc((SV*) cxt.sections, clone_params));
 
     if (cxt.global_metadata) {
-        global_metadata = newHV();
-        copy_hv(aTHX_ cxt.global_metadata, global_metadata);
+        global_metadata = MUTABLE_HV(sv_dup_inc((SV*) cxt.global_metadata, clone_params));
     }
+#else
+    croak("Only called for threads");
+#endif
 }
 
 Cxt::~Cxt() {
@@ -1165,7 +1171,7 @@ void
 devel::statprofiler::init_runloop(pTHX)
 {
     MY_CXT_INIT;
-    new(&MY_CXT) Cxt();
+    new(&MY_CXT) Cxt(aTHX);
 
     Perl_call_atexit(aTHX_ cleanup_runloop, NULL);
 #if !defined(_WIN32)
@@ -1194,14 +1200,21 @@ void
 devel::statprofiler::clone_runloop(pTHX)
 {
     Cxt *original_cxt;
+    CLONE_PARAMS clone_params;
 
     {
         dMY_CXT;
         original_cxt = &MY_CXT;
+
+        clone_params.stashes    = NULL;
+        clone_params.flags      = 0;
+#ifdef USE_ITHREADS
+        clone_params.proto_perl = MY_CXT.interp;
+#endif
     }
 
     MY_CXT_CLONE;
-    new(&MY_CXT) Cxt(*original_cxt);
+    new(&MY_CXT) Cxt(aTHX_ *original_cxt, &clone_params);
 
     // ensures that any eval text the child depends on is in an
     // already closed file, ready for processing
