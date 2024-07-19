@@ -2,9 +2,12 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
-0.52      2024-06-24 23:49:31 CEST
+0.53      2024-07-19 13:49:48 CEST
 
-0.52
+    - Fix segfault under threads on recent Perls
+    - Misc test tweaks
+
+0.52      2024-06-24 23:49:31 CEST
 
     - Varios fixes for Perl 5.38
     - Fix segfault under Perl 5.24
