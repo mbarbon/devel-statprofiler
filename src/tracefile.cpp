@@ -853,7 +853,7 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "line", newSViv(line));
 
             // see comment where last_was_begin is defined
-            if (PERL_VERSION < 38 || !last_was_begin) {
+            if (PERL_VERSION < 36 || !last_was_begin) {
                 av_push(frames, sv_bless(newRV_noinc((SV *) frame), esf_stash));
             } else {
                 SvREFCNT_dec(frame);
@@ -892,7 +892,7 @@ SV *TraceFileReader::read_trace()
             hv_stores(frame, "line", newSViv(line));
 
             // see comment where last_was_begin is defined
-            if (PERL_VERSION < 38 || !last_was_begin) {
+            if (PERL_VERSION < 36 || !last_was_begin) {
                 av_push(frames, sv_bless(newRV_noinc((SV *) frame), msf_stash));
             } else {
                 SvREFCNT_dec(frame);
