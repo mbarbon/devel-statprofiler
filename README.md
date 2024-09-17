@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 ## Devel::StatProfiler
 A low-overhead statistical Perl profiler for production use
+
+## Installation
+Install using Dist::Zilla:
+
+    cpan install Dist::Zilla
+    dzil install
 
 ## Simple usage
 
