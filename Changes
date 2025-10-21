@@ -2,6 +2,10 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.53_01   2025-10-21 18:15:14 CEST
+
+    - Test tweaks
+
 0.53      2024-07-19 13:49:48 CEST
 
     - Fix segfault under threads on recent Perls
