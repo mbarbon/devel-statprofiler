@@ -38,7 +38,7 @@ our @EXPORT = (
   )
 );
 
-our $TAKE_SAMPLE_LINE;
+our ($TAKE_SAMPLE_LINE, $SPAWN_LINE);
 
 sub import {
     unshift @INC, 't/lib';
@@ -223,7 +223,7 @@ sub run_ctests {
 }
 
 sub spawn {
-    my ($sub, @args) = @_;
+    my ($sub, @args) = @_; BEGIN { $SPAWN_LINE = __LINE__ }
 
     if ($Config{usethreads}) {
         return threads->create($sub);
