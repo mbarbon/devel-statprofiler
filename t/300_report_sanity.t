@@ -40,9 +40,9 @@ my $a = $r->{aggregate};
 $r->add_trace_file($profile_file);
 
 # sanity checking
-eq_or_diff([sort grep !m{^/} && !m{xs:(?!Time/HiRes.pm)}, keys %{$a->{files}}],
+eq_or_diff([sort grep +(m{t/lib/Test\.pm$} || (!m{^/} && !m{xs:(?!Time/HiRes.pm)})), keys %{$a->{files}}],
            # need to sort this because of / vs. \ in __FILE__
-           [sort 'xs:Time/HiRes.pm', __FILE__, 't/lib/Test.pm']);
+           [sort 'xs:Time/HiRes.pm', __FILE__, $TEST_PM]);
 
 my $total; $total += $_->{exclusive} for values %{$a->{files}};
 is($a->{total}, $total);
@@ -60,7 +60,7 @@ my $me = $a->{files}{__FILE__ . ''};
 my $moo = sub_at_line($a, $me, $l2);
 
 # t/lib/Test.pm
-my $test_pm = $a->{files}{'t/lib/Test.pm'};
+my $test_pm = $a->{files}{$TEST_PM};
 my $take_sample = sub_at_line($a, $test_pm, $take_sample_line);
 
 ### end setup
@@ -69,7 +69,7 @@ my $take_sample = sub_at_line($a, $test_pm, $take_sample_line);
 # subroutine map
 is($a->{subs}{__FILE__ . ':Moo::bar:24'}, $moo);
 is($a->{subs}{'(unknown):Time::HiRes::usleep'}, $usleep);
-is($a->{subs}{'t/lib/Test.pm:t::lib::Test::take_sample:' . $take_sample_line}, $take_sample);
+is($a->{subs}{"$TEST_PM:t::lib::Test::take_sample:" . $take_sample_line}, $take_sample);
 
 ### end all subroutines
 ### start subroutine attributes
@@ -84,13 +84,13 @@ cmp_ok($usleep->{exclusive}, '>=', 10 / precision_factor);
 cmp_ok($usleep->{inclusive}, '==', $usleep->{exclusive});
 
 # the only usleep call site is from take_sample
-eq_or_diff([sort keys %{$usleep->{call_sites}}], ["t/lib/Test.pm:$take_sample_line"]);
+eq_or_diff([sort keys %{$usleep->{call_sites}}], ["$TEST_PM:$take_sample_line"]);
 {
-    my $cs = $usleep->{call_sites}{"t/lib/Test.pm:$take_sample_line"};
+    my $cs = $usleep->{call_sites}{"$TEST_PM:$take_sample_line"};
     is($cs->{caller}, $take_sample->{uq_name});
     is($cs->{exclusive}, $usleep->{exclusive});
     is($cs->{inclusive}, $usleep->{inclusive});
-    is($cs->{file}, 't/lib/Test.pm');
+    is($cs->{file}, $TEST_PM);
     is($cs->{line}, $take_sample_line);
 }
 
@@ -99,7 +99,7 @@ is($take_sample->{name}, 't::lib::Test::take_sample');
 is($take_sample->{package}, 't::lib::Test');
 is($take_sample->{start_line}, $take_sample_line);
 is($take_sample->{kind}, 0);
-is($take_sample->{file}, 't/lib/Test.pm');
+is($take_sample->{file}, $TEST_PM);
 cmp_ok($take_sample->{exclusive}, '<', 10 / precision_factor);
 cmp_ok($take_sample->{inclusive}, '>=', 10 / precision_factor);
 
@@ -121,8 +121,8 @@ eq_or_diff([sort keys %{$take_sample->{call_sites}}],
 ### start file attributes
 
 # t/lib/Test.pm
-is($test_pm->{name}, 't/lib/Test.pm');
-is($test_pm->{report}, 'Test-pm-b9b148b22b2161075314-line.html');
+is($test_pm->{name}, $TEST_PM);
+like($test_pm->{report}, qr/Test-pm-[a-z0-9]{20}-line.html/);
 cmp_ok($test_pm->{exclusive}, '<=', 5 / precision_factor);
 # WTF cmp_ok($test_pm->{inclusive}, '>=', 20);
 cmp_ok($test_pm->{lines}{inclusive}[$take_sample_line], '>=', 10 / precision_factor);
@@ -134,6 +134,7 @@ is(sub_at_line($a, $test_pm, $take_sample_line), $take_sample);
 ### start flamegraph
 
 my @traces = map {
+    s{t/lib/Test\.pm}{$TEST_PM}reg =~
     s{__FILE__}{__FILE__}reg =~
     s{\$TAKE_SAMPLE_LINE}{$t::lib::Test::TAKE_SAMPLE_LINE}rg
 } qw(

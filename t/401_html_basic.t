@@ -28,6 +28,7 @@ my $a = $r->{aggregate};
 
 my @traces = map {
     s{__FILE__}{__FILE__}reg =~
+    s{t/lib/Test\.pm}{$TEST_PM}rg =~
     s{\$SPAWN_LINE}{$t::lib::Test::SPAWN_LINE}rg =~
     s{\$TAKE_SAMPLE_LINE}{$t::lib::Test::TAKE_SAMPLE_LINE}rg
 }

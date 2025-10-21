@@ -35,10 +35,14 @@ our @EXPORT = (
         temp_profile_file
         visual_test
         sub_at_line
+        $TEST_PM
+        $SLOWOPS_PM
   )
 );
 
 our ($TAKE_SAMPLE_LINE, $SPAWN_LINE);
+our $TEST_PM = $INC{'t/lib/Test.pm'};
+our $SLOWOPS_PM; # assigned in Slowops.pm
 
 sub import {
     unshift @INC, 't/lib';

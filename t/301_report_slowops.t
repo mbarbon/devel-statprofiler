@@ -34,8 +34,8 @@ $r->add_trace_file($profile_file);
 # sanity checking
 ok($a->{subs}{__FILE__ . ':CORE::ftdir'});
 ok($a->{subs}{__FILE__ . ':CORE::subst'});
-ok($a->{subs}{'t/lib/Slowops.pm:CORE::ftdir'});
-ok($a->{subs}{'t/lib/Slowops.pm:CORE::subst'});
+ok($a->{subs}{"$SLOWOPS_PM:CORE::ftdir"});
+ok($a->{subs}{"$SLOWOPS_PM:CORE::subst"});
 
 ### start checking we have one ftdir instance per file
 my ($ftdir_main) = grep $_->{name} eq 'CORE::ftdir',
@@ -43,10 +43,10 @@ my ($ftdir_main) = grep $_->{name} eq 'CORE::ftdir',
                         keys %{$a->{files}{+__FILE__}{subs}{-2}};
 my ($ftdir_so)   = grep $_->{name} eq 'CORE::ftdir',
                    map  $a->{subs}{$_},
-                        keys %{$a->{files}{'t/lib/Slowops.pm'}{subs}{-2}};
+                        keys %{$a->{files}{$SLOWOPS_PM}{subs}{-2}};
 
 is($ftdir_main, $a->{subs}{__FILE__ . ':CORE::ftdir'});
-is($ftdir_so,   $a->{subs}{'t/lib/Slowops.pm:CORE::ftdir'});
+is($ftdir_so,   $a->{subs}{"$SLOWOPS_PM:CORE::ftdir"});
 is($ftdir_main->{kind}, 2);
 is($ftdir_so->{kind}, 2);
 isnt($ftdir_main, $ftdir_so);
@@ -55,10 +55,10 @@ isnt($ftdir_main, $ftdir_so);
 ### start checking op-sub call sites
 
 {
-    my $cs = $ftdir_so->{call_sites}{"t/lib/Slowops.pm:$slowops_foo_line"};
+    my $cs = $ftdir_so->{call_sites}{"$SLOWOPS_PM:$slowops_foo_line"};
 
-    is($cs->{caller}, 't/lib/Slowops.pm:t::lib::Slowops::foo:' . $slowops_foo_line);
-    is($cs->{file}, 't/lib/Slowops.pm');
+    is($cs->{caller}, "$SLOWOPS_PM:t::lib::Slowops::foo:" . $slowops_foo_line);
+    is($cs->{file}, $SLOWOPS_PM);
     is($cs->{line}, $slowops_foo_line);
     is($cs->{inclusive}, $cs->{exclusive});
 }
