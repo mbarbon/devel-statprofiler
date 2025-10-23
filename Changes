@@ -2,6 +2,10 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.54      2025-10-23 14:47:04 CEST
+
+    - Release 0.53_01 as stable without changes
+
 0.53_01   2025-10-21 18:15:14 CEST
 
     - Test tweaks
