@@ -2,6 +2,12 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.54_01   2025-10-23 23:04:24 CEST
+
+    - Update bundled csnappy library to fix issues on CentOS 9
+      (and probably other platforms)
+    - Test tweaks
+
 0.54      2025-10-23 14:47:04 CEST
 
     - Release 0.53_01 as stable without changes
