@@ -35,7 +35,7 @@ my @traces = map {
     s{\$SPAWN_LINE}{$t::lib::Test::SPAWN_LINE}rg =~
     s{\$TAKE_SAMPLE_LINE}{$t::lib::Test::TAKE_SAMPLE_LINE}rg
 }
-  ($] > 5.038 ? '__FILE__:main;t/lib/Test.pm:t::lib::Test::spawn:$SPAWN_LINE' : 't/lib/Test.pm:main' ) . ';__FILE__:main::__ANON__:20;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep',
+  ($] >= 5.024 && !$Config{usethreads} ? '__FILE__:main;t/lib/Test.pm:t::lib::Test::spawn:$SPAWN_LINE' : 't/lib/Test.pm:main' ) . ';__FILE__:main::__ANON__:20;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep',
   qw(
     __FILE__:main;__FILE__:main::before:12;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep
     __FILE__:main;__FILE__:main::after:13;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep

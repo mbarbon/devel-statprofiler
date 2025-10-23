@@ -37,6 +37,7 @@ our @EXPORT = (
         sub_at_line
         $TEST_PM
         $SLOWOPS_PM
+        %Config
   )
 );
 
