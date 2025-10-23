@@ -38,8 +38,14 @@ my @traces = map {
     __FILE__:main;__FILE__:main::after:13;t/lib/Test.pm:t::lib::Test::take_sample:$TAKE_SAMPLE_LINE;(unknown):Time::HiRes::usleep
 );
 
+my $ok = 1;
 for my $trace (@traces) {
-    ok(exists $a->{flames}{$trace}, "present - $trace");
+    $ok &&= ok(exists $a->{flames}{$trace}, "present - $trace");
+}
+
+if (!$ok) {
+    diag("Test failed, dumping flame graph");
+    diag($_) for sort keys %{$a->{flames}};
 }
 
 done_testing();

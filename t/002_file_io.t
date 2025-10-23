@@ -57,6 +57,15 @@ is_deeply($meta_data, $expected_final_meta, "Complete custom meta data comes out
 
 my $sources = $r->get_source_code;
 cmp_ok(scalar keys %$sources, '>=', 1, 'got some eval source code');
-ok((grep $_ eq $src, values %$sources), 'got the source code for long eval');
+ok((grep $_ eq $src, values %$sources), 'got the source code for long eval') || do {
+    diag("Test failed, dumping eval sources");
+    for (sort values %$sources) {
+        if (length($_) > 500) {
+            diag(substr($_, 0, 500) . ' <...> ' . substr($_, -500));
+        } else {
+            diag($_);
+        }
+    }
+};
 
 done_testing();
