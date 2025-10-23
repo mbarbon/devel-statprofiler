@@ -8,13 +8,19 @@ Zeev Tarantov <zeev.tarantov@gmail.com>
 extern "C" {
 #endif
 
-#define CSNAPPY_VERSION	4
+#define CSNAPPY_VERSION	5
 
-#define CSNAPPY_WORKMEM_BYTES_POWER_OF_TWO 15
+#define CSNAPPY_WORKMEM_BYTES_POWER_OF_TWO 16
 #define CSNAPPY_WORKMEM_BYTES (1 << CSNAPPY_WORKMEM_BYTES_POWER_OF_TWO)
 
 #ifndef __GNUC__
 #define __attribute__(x) /*NOTHING*/
+#endif
+
+#if defined(__SUNPRO_C) || defined(_AIX)
+# include <inttypes.h>
+#else
+# include <stdint.h>
 #endif
 
 /*

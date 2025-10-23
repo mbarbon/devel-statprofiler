@@ -86,7 +86,7 @@ encode_varint32(char *sptr, uint32_t v)
 #define kBlockSize (1 << kBlockLog)
 
 
-#if defined(__arm__) && !(ARCH_ARM_HAVE_UNALIGNED)
+#if defined(__arm__) && !defined(ARCH_ARM_HAVE_UNALIGNED)
 
 static uint8_t* emit_literal(
 	uint8_t *op,
@@ -249,7 +249,7 @@ static INLINE uint32_t Hash(const char *p, int shift)
  * Separate implementation for x86_64, for speed.  Uses the fact that
  * x86_64 is little endian.
  */
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__aarch64__)
 static INLINE int
 FindMatchLength(const char *s1, const char *s2, const char *s2_limit)
 {
@@ -293,7 +293,7 @@ FindMatchLength(const char *s1, const char *s2, const char *s2_limit)
 	}
 	return matched;
 }
-#else /* !defined(__x86_64__) */
+#else /* !defined(__x86_64__) && !defined(__aarch64__) */
 static INLINE int
 FindMatchLength(const char *s1, const char *s2, const char *s2_limit)
 {
@@ -326,7 +326,7 @@ FindMatchLength(const char *s1, const char *s2, const char *s2_limit)
 #endif
 	return matched;
 }
-#endif /* !defined(__x86_64__) */
+#endif /* !defined(__x86_64__) && !defined(__aarch64__) */
 
 
 static INLINE char*
@@ -441,7 +441,7 @@ static INLINE EightBytesReference GetEightBytesAt(const char* ptr) {
 static INLINE uint32_t GetUint32AtOffset(uint64_t v, int offset) {
 	DCHECK_GE(offset, 0);
 	DCHECK_LE(offset, 4);
-#ifdef __LITTLE_ENDIAN
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 	return v >> (8 * offset);
 #else
 	return v >> (32 - 8 * offset);
