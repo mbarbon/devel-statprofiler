@@ -204,8 +204,7 @@ int OutputBuffer::flush()
 
 int OutputBuffer::write_bytes(const void *bytes, size_t size)
 {
-    if ((output_position + size > output_buffer + OUTPUT_BUFFER_SIZE) ||
-            (size > OUTPUT_BUFFER_SIZE))
+    if (output_position + size > output_buffer + OUTPUT_BUFFER_SIZE)
         if (!flush_buffer())
             return 0;
 
