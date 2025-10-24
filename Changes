@@ -2,6 +2,10 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.56      2025-10-24 23:34:42 CEST
+
+    - Add Module::Build::WithXSpp to configure_requires
+
 0.55      2025-10-23 23:05:41 CEST
 
     - Release 0.54_01 as stable without changes
