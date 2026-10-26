@@ -668,8 +668,9 @@ start_counter_thread()
 
 #if !defined(_WIN32)
     pthread_t thread;
+    int stack_size = max((size_t) PTHREAD_STACK_MIN, (size_t) 65536);
 
-    ok = ok && !pthread_attr_setstacksize(&attr, 65536);
+    ok = ok && !pthread_attr_setstacksize(&attr, stack_size);
     ok = ok && !pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     ok = ok && !pthread_create(&thread, &attr, thread_function, cxt);
 
